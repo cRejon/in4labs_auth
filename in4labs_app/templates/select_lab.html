@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block header %}
+<header id="main-header">
+    <div class="logos-header">
+        <img class="image" src="{{ url_for('static', filename='img/logo-uned.jpg') }}" alt="logo-uned">
+    </div>
+
+    <div class="page-title">
+        <h2>In4Labs</strong></h2>
+    </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<div class="container shadow px-5">
+    <div class="row">
+        <div class="col-md col-md-offset-1 my-3 text-center">
+            <h4 class="mt16">Please, select a Laboratory to access it.</h4>
+        </div>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            {% for lab in labs %}
+            <div class="row p-2 justify-content-center">
+                <div class="col-md-12" style="background-color:#f4f1f0;">
+                    <div class="row justify-content-center">
+                        <div class="col justify-content-center">
+                                <h5>{{ lab.html_name }}</h5>
+                        </div>
+                        <div class="col justify-content-center">
+                                <a href="{{ url_for('book_lab', lab_name=lab.lab_name) }}" class="btn btn-primary iot my-2 px-4">Enter</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %} 
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,29 @@
+<div class="col-md-8">
+    <div class="row justify-content-md-center my-1">
+        <div class="col-md-2 ml-auto">
+            <img class="img" src="{{ url_for('static', filename='img/console.svg') }}" alt="Arduino Development" width="90px" />
+        </div>
+        <div class="col-md-10">
+            <h5>Insert your code</h5>
+            <p>Your session will last <strong>{{ lab_duration }} minutes</strong>. You can use the code editor to create a new Sketch, upload your own file, or apply one of the pre-defined examples.</p>
+        </div>
+    </div>
+    <div class="row justify-content-md-center my-1">
+        <div class="col-md-2 ml-auto">
+            <img class="img" src="{{ url_for('static', filename='img/code_verified.svg') }}" alt="Arduino Development" width="90px" />
+        </div>
+        <div class="col-md-10">
+            <h5>Verify your code</h5>
+            <p>After you are done with the Sketch, compile your code in order to check that the syntax is correct and therefore, it is possible to execute it.</p>
+        </div>
+    </div>
+    <div class="row justify-content-md-center my-1">
+        <div class="col-md-2 ml-auto">
+            <img class="img img-responsive" src="{{ url_for('static', filename='img/code_compiled.svg') }}" alt="Arduino Development" width="90px" />
+        </div>
+        <div class="col-md-10">
+            <h5>Execute the Sketch</h5>
+            <p>Once the Sketch has been successfully compiled, you can execute it and see the fruit of your work live through the webcam.</p>
+        </div>
+    </div>
+</div>

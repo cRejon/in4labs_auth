@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block scripts %}
+<!-- Saving scripts in a separate JS file makes Jinja variables not work properly -->
+<script>
+    // Set date and hour elements to current date and the next Lab time slot
+    $(document).ready(function() {
+        var labDuration = Number("{{ lab_duration }}");
+        var date = new Date();
+        $('#date').val(date.toISOString().slice(0, 10));
+        var hour = date.getHours();
+        var minute = date.getMinutes();
+        var nextLabMinute = Math.ceil(minute / labDuration) * labDuration;
+        if (nextLabMinute == 60) {
+            nextLabMinute = 0;
+            hour += 1;
+            if (hour == 24) {
+                hour = 0;
+                date.setDate(date.getDate() + 1);
+                $('#date').val(date.toISOString().slice(0, 10));
+            }
+        }
+        $('#hour').val(hour.toString().padStart(2, '0') + ':' + nextLabMinute.toString().padStart(2, '0'));
+
+    });
+    // Restrinct the minutes to multiples of the Lab duration
+    function updateMinutes() {
+        var labDuration = Number("{{ lab_duration }}");
+        var minuteInput = document.getElementById('hour');
+        var selectedMinute = minuteInput.value.split(':')[1];
+        var selectedHour = minuteInput.value.split(':')[0];
+        // Determine the nearest valid minute based on the selected minute
+        var nearestValidMinute = Math.floor(selectedMinute / labDuration) * labDuration;
+        // Update the input value with the nearest valid minute
+        minuteInput.value = selectedHour + ':' + (nearestValidMinute.toString().padStart(2, '0'));
+    }
+
+    function checkSlot() {
+        $.ajax({
+            url: '/check_slot',
+            type: 'GET',
+            data: {
+                lab_name: "{{ lab.lab_name }}",
+                date: $('#date').val(),
+                hour: $('#hour').val()
+            },
+            success: function(response) {
+                $('#modal-body').text(response);
+                // Show the button if the response contains 'available'
+                if (response.toLowerCase().indexOf('available') !== -1) {
+                    $('#reserve-button').show(); 
+                } else {
+                    $('#reserve-button').hide(); 
+                }
+            },
+            error: function(error) {
+                console.log(error);
+            }
+        });
+    }
+</script>
+{% endblock %} 
+
+
+{% block content %}
+<div class="container shadow px-5">
+    <div class="row">
+        <div class="col-md col-md-offset-1 my-3 text-center">
+            <h4 class="mt16">This environment allows students to access a real-time tool for developing...</h4>
+        </div>
+    </div>
+    <div>
+        <div class="row">
+            {% include lab.lab_name + '.html' %}
+            <div class="col-md-4">
+                <div class="row">
+                    <div class="card p-3" style="background-color:#f4f1f0;">
+                        <div class="row justify-content-center">
+                            <div class="col-md-8">
+                                <h5>Select a time slot to reserve the Lab</h5>
+                            </div>
+                        </div>
+                        <form action="" method="post">
+                            <div class="row justify-content-center">
+                                {{ form.hidden_tag() }}
+                                <div class="col-md-6">
+                                    {{ form.date.label }}:<br>
+                                    {{ form.date(class="form-control") }}<br>
+                                </div>
+                                <div class="col-md-5">
+                                    {{ form.hour.label }}:<br>
+                                    {{ form.hour(class="form-control", onchange ="updateMinutes()") }}<br>
+                                </div>
+                                <div class="d-grid d-md-flex justify-content-md-center">
+                                     <!-- Submit button is hidden and the modal is triggered instead -->
+                                    {{ form.submit(class='btn btn-primary', style='display: none') }}
+                                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modal" onclick=checkSlot()>
+                                        Check out
+                                    </button>
+                                </div>
+                            </div>
+                        </form>             
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="card my-4 p-4" style="background-color:#f4f1f0;">
+                        <div class="row">
+                            <div class="col-8">
+                                <h5>Have a reservation?</h5>
+                                <h5>Enter now!</h5>
+                            </div>
+                            <div class="col-4">
+                                <a href="{{ url_for('enter_lab', lab_name=lab.lab_name) }}" class="btn btn-primary iot my-2 px-4">Enter</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal -->
+<div class="modal fade" tabindex="-1" role="dialog" id="modal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h4 class="modal-title">Check reservation</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            
+            <!-- Modal body -->
+            <div class="modal-body" id="modal-body">
+                <!-- Modal content will be dynamically updated here -->
+            </div>
+            
+            <!-- Modal footer -->
+            <div class="modal-footer">
+                <button type="button" id="reserve-button" class="btn btn-primary" onclick="document.getElementById('submit').click()">Reserve Lab</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endblock %} 

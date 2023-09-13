@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- HEAD -->
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<!-- BODY -->
+<body>
+    <div id="overlay"></div>
+    <header>
+        <h3>User email: {{ user_email }}</h3>
+        <h3>User ID: {{ user_id }}</h3>
+        <br>
+    </header>
+
+    <main>
+        <div>
+        <h3>Remaining time</h3>
+        <div id="timer"></div>
+        </div>
+        
+        <script>
+            function countdownTimer(end_time) {
+            let timerDisplay = document.getElementById('timer');
+            let overlay = document.getElementById('overlay');
+
+            // Update the timer every second
+            let countdown = setInterval(() => {
+                // Get the current date and time
+                let currentDate = new Date().getTime();
+
+                // Calculate the remaining time in milliseconds
+                let remainingTime = end_time - currentDate;
+
+                // Check if the countdown is finished
+                if (remainingTime <= 0) {
+                clearInterval(countdown);
+                overlay.style.display = "block";
+                return;
+                }
+
+                // Convert the remaining time to minutes and seconds
+                let minutes = Math.floor((remainingTime / 1000 / 60) % 60);
+                let seconds = Math.floor((remainingTime / 1000) % 60);
+
+                // Format the time display
+                let display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+                // Update the HTML element with the timer value
+                timerDisplay.textContent = display;
+            }, 1000);
+            }
+
+            let end_time = new Date("{{ end_time }}").getTime();
+            countdownTimer(end_time); 
+        </script>
+
+        <div>
+            <iframe id="cam"
+                    src="{{ cam_url }}"
+                    allowfullscreen="allowfullscreen"
+                    mozallowfullscreen="mozallowfullscreen"
+                    webkitallowfullscreen="webkitallowfullscreen"
+                    width="820"
+                    height="460">
+            </iframe>
+        </div>
+        
+    </main>
+
+    <footer>
+
+    </footer>
+    
+</body>
+</html> 
