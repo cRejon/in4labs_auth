@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block header %}
+<header id="main-header">
+    <div class="logos-header">
+        <img class="image" src="{{ url_for('static', filename='img/logo-uned.jpg') }}" alt="logo-uned">
+    </div>
+
+    <div class="page-title">
+        <h2>In4Labs</strong></h2>
+    </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Register</h3>
+                </div>
+                <div class="card-body">
+                    {% for field, errors in form.errors.items() %}
+                    <div class="alert alert-danger">
+                        {{ form[field].label }}: {{ ' '.join(errors) }}
+                    </div>
+                    {% endfor %}
+                    <form action="" method="post">
+                        {{ form.hidden_tag() }}
+                        {{ form.email.label }}<br>
+                        {{ form.email(class="form-control") }}<br>
+                        {{ form.password.label }}<br>
+                        {{ form.password(class="form-control") }}<br>
+                        <label class="form-label">Repeat password</label>
+                        {{ form.password2(class="form-control") }}<br>
+                        <div class="d-grid d-md-flex justify-content-md-center">
+                            {{ form.submit(class='btn btn-primary') }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timedelta
 
 from flask import Flask, session, request, redirect, render_template, url_for, flash, jsonify
-from flask_login import LoginManager, current_user, login_required, login_user
+from flask_login import LoginManager, current_user, login_required
 from flask_sqlalchemy import SQLAlchemy
 from flask_caching import Cache
 
@@ -22,27 +22,33 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 app.config.from_object(Config)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
+# Add blueprint for auth
+from . import auth
+app.register_blueprint(auth.bp, url_prefix='/auth')
+
 cache = Cache(app)
 
-# init login
-login.init_app(app)
-
-# init sqlalchemy
+# Init sqlalchemy
 db.init_app(app)
 
-# create db if not exists
-from .models import User, Booking
+# Create db if not exists
+from .models import Booking
+from .auth.models import User
 if not os.path.exists(os.path.join(basedir, 'in4labs.db')): 
     print('Creating database...')
     with app.app_context():
         db.create_all() # create tables in db
 
-# import labs config from Config object
+# Init login
+login.init_app(app)
+login.login_view='auth.login'
+
+# Import labs config from Config object
 lab_duration = Config.labs_config['duration']
 labs = Config.labs_config['labs']
 
 try:   # for development purposes without docker
-    # create docker image if not exists
+    # Create docker image if not exists
     client = docker.from_env()
     for lab in labs:
         lab_name = lab['lab_name']
@@ -62,7 +68,7 @@ try:   # for development purposes without docker
 except:
     pass
 
-# create a hashed password for the Jupyter notebook
+# Create a hashed password for the Jupyter notebook
 def create_hash(password):
     ph = PasswordHasher(memory_cost=10240, time_cost=10, parallelism=8)
     hash = ph.hash(password)
@@ -76,16 +82,9 @@ def get_lab(lab_name):
     flash(f'Lab not found.', 'error')
     return redirect(url_for('index'))
     
-def log_user(user_email):
-    user = User.query.filter_by(email=user_email).first()
-    if user is None: 
-        # Register the user if doesn't exist
-        user= User(email=user_email)
-        db.session.add(user)
-        db.session.commit()
-    login_user(user, remember=False)
 
 @app.route('/')
+@login_required
 def index():
     if len(labs) == 1:
         return redirect(url_for('book_lab', lab=labs[0]))
@@ -94,6 +93,7 @@ def index():
 
 # check a timeslot availability with AJAX
 @app.route('/check_slot')
+@login_required
 def check_slot():
     lab_name = request.args.get('lab_name') # not used because actual labs are exclusive
     date = request.args.get('date')
@@ -124,38 +124,29 @@ def check_slot():
 
 from .forms import BookingForm
 @app.route('/book/<lab_name>/', methods=['GET', 'POST'])
-#@login_required
+@login_required
 def book_lab(lab_name):
-    if current_user.is_anonymous:
-        log_user('admin@email.com')
-    
     lab = get_lab(lab_name)
     
     form = BookingForm(lab_duration)
     if form.validate_on_submit():
-        # for security reasons, check again if the time slot is still available
+        # For security reasons, check again if the time slot is still available
         date_time = datetime.combine(form.date.data, form.hour.data)
-        #booking = Booking.query.filter_by(date_time=date_time).first()
         booking = Booking.query.filter_by(lab_name=lab_name, date_time=date_time).first()
         if booking is not None: 
             flash('Someone has booked the Lab before you, please select a different time slot.', 'error')
             return redirect(url_for('book_lab', lab_name=lab_name))
         
-        #booking = Booking(user_id=current_user.id, date_time=date_time)
         booking = Booking(user_id=current_user.id, lab_name=lab_name, date_time=date_time)
         db.session.add(booking)
         db.session.commit()
         flash(f'{lab["html_name"]} reserved successfully for {date_time.strftime("%d/%m/%Y @ %H:%Mh.")}', 'success')
         return redirect(url_for('book_lab', lab_name=lab_name))
-    
-    message_launch_data = {'email': 'admin@email.com', 'name': 'admin'}
-    session['message_launch_data'] = message_launch_data
 
     tpl_kwargs = {
         'lab': lab,
         'lab_duration': lab_duration,
-        'curr_user_email': message_launch_data.get('email'),
-        'curr_user_name': message_launch_data.get('name', ''),
+        'user_email': current_user.email,
         'form': form,
     }
     return render_template('book_lab.html', **tpl_kwargs)
@@ -168,14 +159,13 @@ def enter_lab(lab_name):
     minute = datetime.now().minute
     round_minute = minute - (minute % lab_duration)
     round_date_time = datetime.now().replace(minute=round_minute, second=0, microsecond=0)
-    #booking = Booking.query.filter_by(date_time=round_date_time).first()
     booking = Booking.query.filter_by(lab_name=lab_name, date_time=round_date_time).first()
     if booking and (booking.user_id == current_user.id):
         end_time = round_date_time + timedelta(minutes=lab_duration)
-        # Use the first part of the email as password for the Jupyter notebook
-        notebook_password = create_hash(session['message_launch_data'].get('email').split('@')[0])
+        # Use the user email as password for the Jupyter notebook
+        notebook_password = create_hash(current_user.email)
         docker_env = {
-            'USER_EMAIL': session['message_launch_data'].get('email'),
+            'USER_EMAIL': current_user.email,
             'USER_ID': current_user.id,
             'END_TIME': end_time.strftime('%Y-%m-%dT%H:%M:%S'),
             'CAM_URL': lab.get('cam_url', ''),
@@ -204,7 +194,7 @@ class StopContainerTask(threading.Thread):
          self.remaining_secs = remaining_secs
  
      def run(self):
-        # minus 2 seconds for safety
+        # Minus 2 seconds for safety
         time.sleep(self.remaining_secs - 2)
         self.container.stop()
         print('Container stopped.')
