@@ -98,7 +98,7 @@ def get_lab(lab_name):
 @login_required
 def index():
     if len(labs) == 1:
-        return redirect(url_for('book_lab', lab=labs[0]))
+        return redirect(url_for('book_lab', lab_name=labs[0]['lab_name']))
     else:
         return render_template('select_lab.html', labs=labs)
 
