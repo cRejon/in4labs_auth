@@ -52,7 +52,7 @@ try:   # for development purposes without docker
     client = docker.from_env()
     for lab in labs:
         lab_name = lab['lab_name']
-        image_name = f'{lab_name}:latest'
+        image_name = f'{lab_name.lower()}:latest'
         try:
             client.images.get(image_name)
         except docker.errors.ImageNotFound:
