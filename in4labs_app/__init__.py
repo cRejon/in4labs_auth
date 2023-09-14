@@ -47,8 +47,19 @@ login.login_view='auth.login'
 lab_duration = Config.labs_config['duration']
 labs = Config.labs_config['labs']
 
+# Copy html files with lab instructions to templates folder
+for lab in labs:
+    lab_name = lab['lab_name']
+    html_path = os.path.join(basedir, 'labs', lab_name, 'instructions.html')
+    if os.path.exists(html_path):
+        html_dest = os.path.join(basedir, 'templates', f'{lab_name}_instructions.html')
+        with open(html_path, 'r') as f:
+            html_content = f.read()
+        with open(html_dest, 'w') as f:
+            f.write(html_content)
+
 try:   # for development purposes without docker
-    # Create docker image if not exists
+    # Create docker image for each lab if not exists
     client = docker.from_env()
     for lab in labs:
         lab_name = lab['lab_name']
