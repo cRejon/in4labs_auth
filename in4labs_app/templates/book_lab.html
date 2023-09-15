@@ -3,11 +3,28 @@
 {% block scripts %}
 <!-- Saving scripts in a separate JS file makes Jinja variables not work properly -->
 <script>
+    // Get the current date and time in ISO format with the timezone offset
+    function toIsoString(date) {
+        var tzo = -date.getTimezoneOffset(),
+            dif = tzo >= 0 ? '+' : '-',
+            pad = function(num) {
+                return (num < 10 ? '0' : '') + num;
+            };
+
+        return date.getFullYear() +
+            '-' + pad(date.getMonth() + 1) +
+            '-' + pad(date.getDate()) +
+            'T' + pad(date.getHours()) +
+            ':' + pad(date.getMinutes()) +
+            ':' + pad(date.getSeconds()) +
+            dif + pad(Math.floor(Math.abs(tzo) / 60)) +
+            ':' + pad(Math.abs(tzo) % 60);
+    }
     // Set date and hour elements to current date and the next Lab time slot
     $(document).ready(function() {
         var labDuration = Number("{{ lab_duration }}");
         var date = new Date();
-        $('#date').val(date.toISOString().slice(0, 10));
+        $('#date').val(toIsoString(date).slice(0, 10));
         var hour = date.getHours();
         var minute = date.getMinutes();
         var nextLabMinute = Math.ceil(minute / labDuration) * labDuration;
@@ -17,7 +34,7 @@
             if (hour == 24) {
                 hour = 0;
                 date.setDate(date.getDate() + 1);
-                $('#date').val(date.toISOString().slice(0, 10));
+                $('#date').val(date.toIsoString().slice(0, 10));
             }
         }
         $('#hour').val(hour.toString().padStart(2, '0') + ':' + nextLabMinute.toString().padStart(2, '0'));
