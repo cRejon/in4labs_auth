@@ -170,8 +170,24 @@ def enter_lab(lab_name):
     round_minute = minute - (minute % lab_duration)
     round_date_time = datetime.now().replace(minute=round_minute, second=0, microsecond=0)
     booking = Booking.query.filter_by(lab_name=lab_name, date_time=round_date_time).first()
+
     if booking and (booking.user_id == current_user.id):
+        image_name = f'{lab_name.lower()}:latest'
+        container_name = f'{lab_name.lower()}-{current_user.id}'
+        port = lab['host_port']      
+        hostname = request.headers.get('Host').split(':')[0]
+        container_url = f'http://{hostname}:{port}'
         end_time = round_date_time + timedelta(minutes=lab_duration)
+
+        # Check if the container is already running (e.g. the user click twice on the Enter button)
+        # If so, redirect to the container url
+        # If not, start the container
+        try:
+            container = client.containers.get(container_name)
+            return redirect(container_url)
+        except docker.errors.NotFound:
+            pass 
+
         # Use the user email as password for the Jupyter notebook
         notebook_password = create_hash(current_user.email)
         docker_env = {
@@ -181,17 +197,19 @@ def enter_lab(lab_name):
             'CAM_URL': lab.get('cam_url', ''),
             'NOTEBOOK_PASSWORD': notebook_password,
         }
-        image_name = f'{lab_name.lower()}:latest'
-        port = lab['host_port']
-        container = client.containers.run(image_name, detach=True, remove=True,
-                                            ports={'8000/tcp': ('0.0.0.0', port)}, environment=docker_env)
+        
+        container = client.containers.run(
+                        image_name, 
+                        name=container_name,
+                        detach=True, 
+                        remove=True,
+                        ports={'8000/tcp': ('0.0.0.0', port)}, 
+                        environment=docker_env)
 
         remaining_secs = (end_time - datetime.now()).total_seconds()
         stop_container = StopContainerTask(container, remaining_secs)
         stop_container.start()
         
-        hostname = request.headers.get('Host').split(':')[0]
-        container_url = f'http://{hostname}:{port}'
         return redirect(container_url)
     
     flash('You don´t have a reservation for the actual time slot, please make a booking.', 'error')
