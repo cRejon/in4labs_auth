@@ -59,25 +59,6 @@ for lab in labs:
             f.write(html_content)
 
 
-# Create docker image for each lab if not exists
-client = docker.from_env()
-for lab in labs:
-    lab_name = lab['lab_name']
-    image_name = f'{lab_name.lower()}:latest'
-    try:
-        client.images.get(image_name)
-    except docker.errors.ImageNotFound:
-        print(f'Creating Docker image {image_name}. Be patient, this will take a while...')
-        dockerfile_path = os.path.join(basedir, 'labs', lab_name)
-        image, build_logs = client.images.build(
-            path=dockerfile_path,
-            tag=image_name,
-            rm=True,
-        )
-        for log in build_logs: # Print the build logs for debugging purposes
-            print(log.get('stream', '').strip())
-        print(f'Docker image {image_name} created successfully.')
-
 # Create a hashed password for the Jupyter notebook
 def create_hash(password):
     ph = PasswordHasher(memory_cost=10240, time_cost=10, parallelism=8)
@@ -164,6 +145,7 @@ def book_lab(lab_name):
 @app.route('/enter/<lab_name>/', methods=['GET'])
 @login_required
 def enter_lab(lab_name):
+    client = docker.from_env()
     lab = get_lab(lab_name) 
 
     minute = datetime.now().minute
