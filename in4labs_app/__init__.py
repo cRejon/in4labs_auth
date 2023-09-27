@@ -185,6 +185,8 @@ def enter_lab(lab_name):
                         name=container_name,
                         detach=True, 
                         remove=True,
+                        privileged=True,
+                        volumes={'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}},
                         ports={'8000/tcp': ('0.0.0.0', port)}, 
                         environment=docker_env)
 
