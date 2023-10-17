@@ -156,9 +156,10 @@ def enter_lab(lab_name):
     if booking and (booking.user_id == current_user.id):
         image_name = f'{lab_name.lower()}:latest'
         container_name = f'{lab_name.lower()}-{current_user.id}'
-        port = lab['host_port']      
+        host_port = lab['host_port'] 
+        nat_port = lab['nat_port']     
         hostname = request.headers.get('Host').split(':')[0]
-        container_url = f'http://{hostname}:{port}'
+        container_url = f'http://{hostname}:{nat_port}'
         end_time = round_date_time + timedelta(minutes=lab_duration)
 
         # Check if the container is already running (e.g. the user click twice on the Enter button)
@@ -187,7 +188,7 @@ def enter_lab(lab_name):
                         remove=True,
                         privileged=True,
                         volumes={'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}},
-                        ports={'8000/tcp': ('0.0.0.0', port)}, 
+                        ports={'8000/tcp': ('0.0.0.0', host_port)}, 
                         environment=docker_env)
 
         remaining_secs = (end_time - datetime.now()).total_seconds()

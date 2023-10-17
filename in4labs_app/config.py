@@ -32,12 +32,14 @@ class Config(object):
             'html_name' : 'Laboratory 1',
             'description' : 'Example of a remote laboratory for Arduino.',
             'host_port' : 8001,
+            'nat_port' : 8119,
             'cam_url': 'http://62.204.201.51:8100/Mjpeg/1?authToken=2454ef16-84cf-4184-a748-8bddd993c078',
         }, {
             'lab_name' : 'lab_2',
             'html_name' : 'Laboratory 2',
             'description' : 'Example of a remote laboratory for Jupyter Notebook.',
             'host_port' : 8002,
+            'nat_port' : 8220,
         }],
     }
 
