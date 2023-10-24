@@ -148,23 +148,34 @@ def enter_lab(lab_name):
     client = docker.from_env()
     lab = get_lab(lab_name) 
 
-    minute = datetime.now().minute
-    round_minute = minute - (minute % lab_duration)
-    round_date_time = datetime.now().replace(minute=round_minute, second=0, microsecond=0)
-    booking = Booking.query.filter_by(lab_name=lab_name, date_time=round_date_time).first()
+    actual_minute = datetime.now().minute
+    start_minute = actual_minute - (actual_minute % lab_duration)
+    start_date_time = datetime.now().replace(minute=start_minute, second=0, microsecond=0)
+    booking = Booking.query.filter_by(lab_name=lab_name, date_time=start_date_time).first()
 
     if booking and (booking.user_id == current_user.id):
         image_name = f'{lab_name.lower()}:latest'
-        container_name = f'{lab_name.lower()}-{current_user.id}'
+        # Create a unique container name with the lab name and the start date time
+        container_name = f'{lab_name.lower()}-{start_date_time.strftime("%Y%m%d%H%M")}'
         host_port = lab['host_port'] 
         nat_port = lab['nat_port']     
         hostname = request.headers.get('Host').split(':')[0]
         container_url = f'http://{hostname}:{nat_port}'
-        end_time = round_date_time + timedelta(minutes=lab_duration)
+        end_time = start_date_time + timedelta(minutes=lab_duration)
 
-        # Check if the container is already running (e.g. the user click twice on the Enter button)
-        # If so, redirect to the container url
-        # If not, start the container
+        # When containers are stopped, they spend some time (10 seconds max) in the "exited" 
+        # state before they are removed. To avoid conflicts with ports, we check if the 
+        # previous time slot container is still running and wait until it is stopped.
+        try:
+            prev_container_name = f'{lab_name.lower()}-{(start_date_time - timedelta(minutes=lab_duration)).strftime("%Y%m%d%H%M")}'
+            while(client.containers.get(prev_container_name)):
+                print(f'Waiting for {prev_container_name} to stop...')
+                time.sleep(1)
+        except docker.errors.NotFound:
+            pass
+
+        # Check if the actual time slot container is already running (e.g. the user click twice on the Enter button).
+        # If so, redirect to the container url. If not, start the container
         try:
             container = client.containers.get(container_name)
             return redirect(container_url)
@@ -197,8 +208,9 @@ def enter_lab(lab_name):
         
         return redirect(container_url)
     
-    flash('You don´t have a reservation for the actual time slot, please make a booking.', 'error')
-    return redirect(url_for('book_lab', lab_name=lab_name))
+    else:
+        flash('You don´t have a reservation for the actual time slot, please make a booking.', 'error')
+        return redirect(url_for('book_lab', lab_name=lab_name))
 
  
 class StopContainerTask(threading.Thread):
@@ -208,7 +220,7 @@ class StopContainerTask(threading.Thread):
          self.remaining_secs = remaining_secs
  
      def run(self):
-        # Minus 2 seconds for safety
-        time.sleep(self.remaining_secs - 2)
+        # Minus 3 seconds to avoid conflicts with the next time slot container
+        time.sleep(self.remaining_secs - 3)
         self.container.stop()
         print('Container stopped.')
