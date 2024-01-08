@@ -163,17 +163,6 @@ def enter_lab(lab_name):
         container_url = f'http://{hostname}:{nat_port}'
         end_time = start_date_time + timedelta(minutes=lab_duration)
 
-        # When containers are stopped, they spend some time (10 seconds max) in the "exited" 
-        # state before they are removed. To avoid conflicts with ports, we check if the 
-        # previous time slot container is still running and wait until it is stopped.
-        try:
-            prev_container_name = f'{lab_name.lower()}-{(start_date_time - timedelta(minutes=lab_duration)).strftime("%Y%m%d%H%M")}'
-            while(client.containers.get(prev_container_name)):
-                print(f'Waiting for {prev_container_name} to stop...')
-                time.sleep(1)
-        except docker.errors.NotFound:
-            pass
-
         # Check if the actual time slot container is already running (e.g. the user click twice on the Enter button).
         # If so, redirect to the container url. If not, start the container
         try:
@@ -181,6 +170,16 @@ def enter_lab(lab_name):
             return redirect(container_url)
         except docker.errors.NotFound:
             pass 
+        
+        # NOTE: The thread created by the StopContainerTask class sometimes doesn't stop the container,
+        # so check if there is any previous container running and stop it  
+        try:
+            containers = client.containers.list()
+            for container in containers:
+                if container.name.startswith(lab_name.lower()):
+                    container.stop()
+        except docker.errors.NotFound:
+            pass
 
         # Use the user email as password for the Jupyter notebook
         notebook_password = create_hash(current_user.email)
