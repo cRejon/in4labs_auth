@@ -202,7 +202,7 @@ def enter_lab(lab_name):
                         environment=docker_env)
 
         remaining_secs = (end_time - datetime.now()).total_seconds()
-        stop_container = StopContainerTask(container, remaining_secs)
+        stop_container = StopContainerTask(lab_name, container, remaining_secs, current_user.email)
         stop_container.start()
         
         return redirect(container_url)
@@ -213,13 +213,22 @@ def enter_lab(lab_name):
 
  
 class StopContainerTask(threading.Thread):
-     def __init__(self, container, remaining_secs):
+     def __init__(self, lab_name, container, remaining_secs, user_email):
          super(StopContainerTask, self).__init__()
+         self.lab_name = lab_name
          self.container = container
          self.remaining_secs = remaining_secs
+         self.user_email = user_email
  
      def run(self):
         # Minus 3 seconds to avoid conflicts with the next time slot container
         time.sleep(self.remaining_secs - 3)
+        # Save the container logs to a file
+        logs = self.container.logs()
+        logs = logs.decode('utf-8').split('Press CTRL+C to quit')[1]
+        logs = 'USER: ' + self.user_email + logs
+        with open(f'{lab_name}_logs_UTC.txt', 'a') as f:
+            f.write(logs)
+        # Stop the container
         self.container.stop()
         print('Container stopped.')
