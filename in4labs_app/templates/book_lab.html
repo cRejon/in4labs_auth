@@ -24,7 +24,6 @@
     $(document).ready(function() {
         var labDuration = Number("{{ lab_duration }}");
         var date = new Date();
-        $('#date').val(toIsoString(date).slice(0, 10));
         var hour = date.getHours();
         var minute = date.getMinutes();
         var nextLabMinute = Math.ceil(minute / labDuration) * labDuration;
@@ -34,16 +33,16 @@
             if (hour == 24) {
                 hour = 0;
                 date.setDate(date.getDate() + 1);
-                $('#date').val(date.toIsoString().slice(0, 10));
             }
         }
-        $('#hour').val(hour.toString().padStart(2, '0') + ':' + nextLabMinute.toString().padStart(2, '0'));
+        $('#date').val(toIsoString(date).slice(0, 10));
+        $('#time').val(hour.toString().padStart(2, '0') + ':' + nextLabMinute.toString().padStart(2, '0'));
 
     });
     // Restrinct the minutes to multiples of the Lab duration
     function updateMinutes() {
         var labDuration = Number("{{ lab_duration }}");
-        var minuteInput = document.getElementById('hour');
+        var minuteInput = document.getElementById('time');
         var selectedMinute = minuteInput.value.split(':')[1];
         var selectedHour = minuteInput.value.split(':')[0];
         // Determine the nearest valid minute based on the selected minute
@@ -53,13 +52,14 @@
     }
 
     function checkSlot() {
+        var user_datetime = new Date($('#date').val() + 'T' + $('#time').val());
+        $('#date_time').val(toIsoString(user_datetime));
         $.ajax({
             url: '/check_slot',
             type: 'GET',
             data: {
                 lab_name: "{{ lab.lab_name }}",
-                date: $('#date').val(),
-                hour: $('#hour').val()
+                user_datetime: toIsoString(user_datetime),
             },
             success: function(response) {
                 $('#modal-body').text(response);
@@ -105,11 +105,12 @@
                                     {{ form.date(class="form-control") }}<br>
                                 </div>
                                 <div class="col-md-5">
-                                    {{ form.hour.label }}:<br>
-                                    {{ form.hour(class="form-control", onchange ="updateMinutes()") }}<br>
+                                    {{ form.time.label }}:<br>
+                                    {{ form.time(class="form-control", onchange ="updateMinutes()") }}<br>
                                 </div>
                                 <div class="d-grid d-md-flex justify-content-md-center">
-                                     <!-- Submit button is hidden and the modal is triggered instead -->
+                                    {{ form.date_time }}
+                                    <!-- Submit button is hidden and the modal is triggered instead -->
                                     {{ form.submit(class='btn btn-primary', style='display: none') }}
                                     <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modal" onclick=checkSlot()>
                                         Check out

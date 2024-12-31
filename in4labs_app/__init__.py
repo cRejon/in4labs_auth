@@ -1,7 +1,7 @@
 import os
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Flask, session, request, redirect, render_template, url_for, flash, jsonify
 from flask_login import LoginManager, current_user, login_required
@@ -82,33 +82,31 @@ def index():
     else:
         return render_template('select_lab.html', labs=labs)
 
-# check a timeslot availability with AJAX
+# Check a timeslot availability with AJAX
 @app.route('/check_slot')
 @login_required
 def check_slot():
     lab_name = request.args.get('lab_name') # not used because actual labs are exclusive
-    date = request.args.get('date')
-    hour = request.args.get('hour')
-    date_time = datetime.strptime(date + ' ' + hour, '%Y-%m-%d %H:%M')
-    str_date_time = date_time.strftime('%d/%m/%Y @ %H:%Mh')
-
-    minute = datetime.now().minute
-    round_minute = minute - (minute % lab_duration)
-    round_date_time = datetime.now().replace(minute=round_minute, second=0, microsecond=0)
+    user_datetime = datetime.fromisoformat(request.args.get('user_datetime'))
+    formatted_user_datetime = user_datetime.strftime('%d/%m/%Y @ %H:%Mh')
+    utc_user_datetime = user_datetime.astimezone(timezone.utc)
 
     # Check if date_time is outdate
-    if date_time < round_date_time:
-        response = f'''The date and time you selected ({str_date_time}) 
+    actual_minute = datetime.now(timezone.utc).minute
+    round_minute = actual_minute - (actual_minute % lab_duration)
+    round_date_time = datetime.now(timezone.utc).replace(minute=round_minute, second=0, microsecond=0)
+    if utc_user_datetime < round_date_time:
+        response = f'''The date and time you selected ({formatted_user_datetime}) 
                        is outdate, please select a different one.'''
         return jsonify(response)
 
-    booking = Booking.query.filter_by(date_time=date_time).first()
-    #booking = Booking.query.filter_by(lab_name=lab_name, date_time=date_time).first()
+    booking = Booking.query.filter_by(date_time=utc_user_datetime).first()
+    #booking = Booking.query.filter_by(lab_name=lab_name, date_time=utc_user_datetime).first()
     if booking is not None: # time slot is already booked
-        response = f'''Time slot for {str_date_time} is already 
+        response = f'''Time slot for {formatted_user_datetime} is already 
                        reserved, please select a different one.'''
     else:
-        response = f'''Time slot for {str_date_time} is available.
+        response = f'''Time slot for {formatted_user_datetime} is available.
                         Do you want to reserve the Lab? '''
          
     return jsonify(response)
@@ -121,17 +119,19 @@ def book_lab(lab_name):
     
     form = BookingForm(lab_duration)
     if form.validate_on_submit():
+        user_datetime = datetime.fromisoformat(form.date_time.data)
+        formatted_user_datetime = user_datetime.strftime('%d/%m/%Y @ %H:%Mh')
+        utc_user_datetime = user_datetime.astimezone(timezone.utc)
         # For security reasons, check again if the time slot is still available
-        date_time = datetime.combine(form.date.data, form.hour.data)
-        booking = Booking.query.filter_by(lab_name=lab_name, date_time=date_time).first()
+        booking = Booking.query.filter_by(lab_name=lab_name, date_time=utc_user_datetime).first()
         if booking is not None: 
             flash('Someone has booked the Lab before you, please select a different time slot.', 'error')
             return redirect(url_for('book_lab', lab_name=lab_name))
         
-        booking = Booking(user_id=current_user.id, lab_name=lab_name, date_time=date_time)
+        booking = Booking(user_id=current_user.id, lab_name=lab_name, date_time=utc_user_datetime)
         db.session.add(booking)
         db.session.commit()
-        flash(f'{lab["html_name"]} reserved successfully for {date_time.strftime("%d/%m/%Y @ %H:%Mh.")}', 'success')
+        flash(f'{lab["html_name"]} reserved successfully for {formatted_user_datetime}', 'success')
         return redirect(url_for('book_lab', lab_name=lab_name))
 
     tpl_kwargs = {
@@ -145,33 +145,35 @@ def book_lab(lab_name):
 @app.route('/enter/<lab_name>/', methods=['GET'])
 @login_required
 def enter_lab(lab_name):
-    client = docker.from_env()
     lab = get_lab(lab_name) 
 
-    actual_minute = datetime.now().minute
+    actual_minute = datetime.now(timezone.utc).minute
     start_minute = actual_minute - (actual_minute % lab_duration)
-    start_date_time = datetime.now().replace(minute=start_minute, second=0, microsecond=0)
-    booking = Booking.query.filter_by(lab_name=lab_name, date_time=start_date_time).first()
-
+    start_datetime = datetime.now(timezone.utc).replace(minute=start_minute, second=0, microsecond=0)
+    booking = Booking.query.filter_by(lab_name=lab_name, date_time=start_datetime).first()
+    
     if booking and (booking.user_id == current_user.id):
+        client = docker.from_env()
         image_name = f'{lab_name.lower()}:latest'
         # Create a unique container name with the lab name and the start date time
-        container_name = f'{lab_name.lower()}-{start_date_time.strftime("%Y%m%d%H%M")}'
+        container_name = f'{lab_name.lower()}-{start_datetime.strftime("%Y%m%d%H%M")}'
         host_port = lab['host_port'] 
         nat_port = lab['nat_port']     
         hostname = request.headers.get('Host').split(':')[0]
-        container_url = f'http://{hostname}:{nat_port}'
-        end_time = start_date_time + timedelta(minutes=lab_duration)
+        lab_url = f'http://{hostname}:{nat_port}'
+        end_time = start_datetime + timedelta(minutes=lab_duration)
+        # Check if the lab needs extra containers
+        extra_containers = lab.get('extra_containers', [])
 
         # Check if the actual time slot container is already running (e.g. the user click twice on the Enter button).
         # If so, redirect to the container url. If not, start the container
         try:
             container = client.containers.get(container_name)
-            return redirect(container_url)
+            return redirect(lab_url)
         except docker.errors.NotFound:
             pass 
         
-        # NOTE: The thread created by the StopContainerTask class sometimes doesn't stop the container,
+        # NOTE: The thread created by the StopContainersTask class sometimes doesn't stop the lab container,
         # so check if there is any previous container running and stop it  
         try:
             containers = client.containers.list()
@@ -181,17 +183,19 @@ def enter_lab(lab_name):
         except docker.errors.NotFound:
             pass
 
+        user_email = current_user.email
         # Use the user email as password for the Jupyter notebook
-        notebook_password = create_hash(current_user.email)
+        notebook_password = create_hash(user_email)
         docker_env = {
-            'USER_EMAIL': current_user.email,
+            'USER_EMAIL': user_email,
             'USER_ID': current_user.id,
-            'END_TIME': end_time.strftime('%Y-%m-%dT%H:%M:%S'),
+            'END_TIME': end_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
             'CAM_URL': lab.get('cam_url', ''),
             'NOTEBOOK_PASSWORD': notebook_password,
         }
         
-        container = client.containers.run(
+        containers = []
+        container_lab = client.containers.run(
                         image_name, 
                         name=container_name,
                         detach=True, 
@@ -200,35 +204,49 @@ def enter_lab(lab_name):
                         volumes={'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}},
                         ports={'8000/tcp': ('0.0.0.0', host_port)}, 
                         environment=docker_env)
+        containers.append(container_lab)
 
-        remaining_secs = (end_time - datetime.now()).total_seconds()
-        stop_container = StopContainerTask(lab_name, container, remaining_secs, current_user.email)
-        stop_container.start()
+        # Start the extra containers
+        for extra_container in extra_containers:
+            container_extra = client.containers.run(
+                            extra_container['image'], 
+                            name=f'{container_name}-{extra_container["name"]}',
+                            detach=True, 
+                            remove=True,
+                            network=extra_container['network'],
+                            ports=extra_container['ports'],
+                            command=extra_container.get('command', ''))
+            containers.append(container_extra)
+
+        stop_containers = StopContainersTask(lab_name, containers, end_time, current_user.email)
+        stop_containers.start()
         
-        return redirect(container_url)
-    
+        return redirect(lab_url)
+
     else:
         flash('You don´t have a reservation for the actual time slot, please make a booking.', 'error')
         return redirect(url_for('book_lab', lab_name=lab_name))
 
  
-class StopContainerTask(threading.Thread):
-     def __init__(self, lab_name, container, remaining_secs, user_email):
-         super(StopContainerTask, self).__init__()
+class StopContainersTask(threading.Thread):
+     def __init__(self, lab_name, containers, end_time, user_email):
+         super(StopContainersTask, self).__init__()
          self.lab_name = lab_name
-         self.container = container
-         self.remaining_secs = remaining_secs
+         self.containers = containers
+         self.end_time = end_time
          self.user_email = user_email
  
      def run(self):
+        remaining_secs = (self.end_time - datetime.now(timezone.utc)).total_seconds()
         # Minus 3 seconds to avoid conflicts with the next time slot container
-        time.sleep(self.remaining_secs - 3)
-        # Save the container logs to a file
-        logs = self.container.logs()
+        time.sleep(remaining_secs - 3)
+        # Save the container lab logs to a file
+        logs = self.containers[0].logs()
         logs = logs.decode('utf-8').split('Press CTRL+C to quit')[1]
         logs = 'USER: ' + self.user_email + logs
         with open(f'{lab_name}_logs_UTC.txt', 'a') as f:
             f.write(logs)
-        # Stop the container
-        self.container.stop()
-        print('Container stopped.')
+        # Stop the containers
+        for container in self.containers:
+            container.stop()
+        print('Lab containers stopped.')
