@@ -32,14 +32,21 @@ class Config(object):
             'html_name' : 'Laboratory 1',
             'description' : 'Example of a remote laboratory for Arduino.',
             'host_port' : 8001,
-            'nat_port' : 8119,
-            'cam_url': 'http://62.204.201.51:8100/Mjpeg/1?authToken=2454ef16-84cf-4184-a748-8bddd993c078',
+            'nat_port' : 8881,
+            'cam_url': 'http://ULR_TO_WEBCAM/Mjpeg',
+            'extra_containers': [{
+                'name': 'mosquitto',
+                'image': 'eclipse-mosquitto',
+                'ports': {'1883/tcp': ('0.0.0.0', 1883)},
+                'network': 'in4labs_net',
+                'command': '',
+            }]
         }, {
             'lab_name' : 'lab_2',
             'html_name' : 'Laboratory 2',
             'description' : 'Example of a remote laboratory for Jupyter Notebook.',
             'host_port' : 8002,
-            'nat_port' : 8220,
+            'nat_port' : 8882,
         }],
     }
 
