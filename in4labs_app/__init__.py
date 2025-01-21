@@ -12,7 +12,7 @@ import docker
 
 from argon2 import PasswordHasher
 
-from .config import Config
+from ..config import Config
 
 
 db = SQLAlchemy()
