@@ -74,4 +74,4 @@ for lab in labs:
                     client.volumes.create(volume_name)
                     print(f'Docker volume {volume_name} created successfully.')
 
-print('All Docker images, networks and volumens are ready.')
+print('All Docker images and networks are ready.')
