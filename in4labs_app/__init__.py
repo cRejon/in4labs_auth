@@ -186,11 +186,15 @@ def enter_lab(lab_name):
         lab_image_name = f'{lab_name.lower()}:latest'
         # Create a unique container name with the lab name and the start date time
         container_name = f'{lab_name.lower()}-{start_datetime.strftime("%Y%m%d%H%M")}'
-        host_port = lab['host_port'] 
-        nat_port = lab['nat_port']     
+        host_port = lab['host_port']
+        nat_port = lab['nat_port']
+        default_volume = {'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}}
+        lab_volumes = default_volume.update(lab.get('volumes', {}))
+
         hostname = request.headers.get('Host').split(':')[0]
         lab_url = f'http://{hostname}:{nat_port}'
         end_time = start_datetime + timedelta(minutes=lab_duration)
+        
         # Check if the lab needs extra containers
         extra_containers = lab.get('extra_containers', [])
         # Check if node-red is in extra_containers and get the nat port
@@ -256,7 +260,7 @@ def enter_lab(lab_name):
                         detach=True, 
                         remove=True,
                         privileged=True,
-                        volumes={'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}},
+                        volumes=lab_volumes,
                         ports={'8000/tcp': ('0.0.0.0', host_port)}, 
                         environment=docker_env)
         containers.append(container_lab)
