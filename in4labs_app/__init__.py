@@ -1,4 +1,5 @@
 import os
+import re
 import threading
 import time
 from datetime import datetime, timedelta, timezone
@@ -9,6 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_caching import Cache
 
 import docker
+import bcrypt
 
 from argon2 import PasswordHasher
 
@@ -68,6 +70,30 @@ def create_hash(password):
     hash = ph.hash(password)
     hash = ':'.join(('argon2', hash))
     return hash
+
+def setup_node_red(client, volume_name, nodered_dir, user_email):
+    # Clean the volume for the new user
+    volume = client.volumes.get(volume_name)
+    volume.remove()
+    client.volumes.create(volume_name)
+    # Set the username and password for the node-red container
+    # Generate bcrypt hash from the user email
+    hashed_password = bcrypt.hashpw(user_email.encode(), bcrypt.gensalt()).decode()
+    # Copy the default settings file
+    settings_default_file = os.path.join(nodered_dir, 'settings_default.js')
+    with open(settings_default_file, 'r') as file:
+        js_content = file.read()
+    # Use regular expressions to find and replace the username and password
+    username_pattern = r'username:\s*"[^"]*"'
+    password_pattern = r'password:\s*"[^"]*"'
+    new_username_line = f'username: "{user_email}"'
+    new_password_line = f'password: "{hashed_password}"'
+    js_content = re.sub(username_pattern, new_username_line, js_content)
+    js_content = re.sub(password_pattern, new_password_line, js_content)
+    # Write the modified content in a settings.js file
+    settings_file = os.path.join(nodered_dir, 'settings.js')
+    with open(settings_file, 'w') as file:
+        file.write(js_content)
 
 def get_lab(lab_name):
     for lab in labs:
@@ -157,7 +183,7 @@ def enter_lab(lab_name):
     
     if booking and (booking.user_id == current_user.id):
         client = docker.from_env()
-        image_name = f'{lab_name.lower()}:latest'
+        lab_image_name = f'{lab_name.lower()}:latest'
         # Create a unique container name with the lab name and the start date time
         container_name = f'{lab_name.lower()}-{start_datetime.strftime("%Y%m%d%H%M")}'
         host_port = lab['host_port'] 
@@ -167,6 +193,13 @@ def enter_lab(lab_name):
         end_time = start_datetime + timedelta(minutes=lab_duration)
         # Check if the lab needs extra containers
         extra_containers = lab.get('extra_containers', [])
+        # Check if node-red is in extra_containers and get the nat port
+        for extra_container in extra_containers:
+            if extra_container['name'] == 'node-red':
+                nodered_nat_port = extra_container['nat_port']
+                break
+            else:
+                nodered_nat_port = 1880
 
         # Check if the actual time slot container is already running (e.g. the user click twice on the Enter button).
         # If so, redirect to the container url. If not, start the container
@@ -195,11 +228,30 @@ def enter_lab(lab_name):
             'END_TIME': end_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
             'CAM_URL': lab.get('cam_url', ''),
             'NOTEBOOK_PASSWORD': notebook_password,
+            'NODE_RED_URL': f'http://{hostname}:{nodered_nat_port}',
         }
         
         containers = []
+        # Start the extra containers
+        for extra_container in extra_containers:
+            if extra_container['name'] == 'node-red':
+                volume_name = extra_container['volumes'].keys()[0]
+                nodered_dir = os.path.join(basedir, 'labs', lab_name, 'node-red')
+                setup_node_red(client, volume_name, nodered_dir, current_user.email)
+
+            container_extra = client.containers.run(
+                            extra_container['image'], 
+                            name=extra_container["name"],
+                            detach=True,
+                            remove=True,
+                            ports=extra_container['ports'],
+                            volumes=extra_container.get('volumes', {}),
+                            network=extra_container.get('network', ''),
+                            command=extra_container.get('command', ''))
+            containers.append(container_extra)
+        # Run the lab container
         container_lab = client.containers.run(
-                        image_name, 
+                        lab_image_name, 
                         name=container_name,
                         detach=True, 
                         remove=True,
@@ -208,18 +260,6 @@ def enter_lab(lab_name):
                         ports={'8000/tcp': ('0.0.0.0', host_port)}, 
                         environment=docker_env)
         containers.append(container_lab)
-
-        # Start the extra containers
-        for extra_container in extra_containers:
-            container_extra = client.containers.run(
-                            extra_container['image'], 
-                            name=f'{container_name}-{extra_container["name"]}',
-                            detach=True, 
-                            remove=True,
-                            network=extra_container['network'],
-                            ports=extra_container['ports'],
-                            command=extra_container.get('command', ''))
-            containers.append(container_extra)
 
         stop_containers = StopContainersTask(lab_name, containers, end_time, current_user.email)
         stop_containers.start()

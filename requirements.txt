@@ -1,5 +1,6 @@
 argon2-cffi==21.3.0
 argon2-cffi-bindings==21.2.0
+bcrypt==3.1.7 
 blinker==1.6.2
 certifi==2023.5.7
 cffi==1.15.1
