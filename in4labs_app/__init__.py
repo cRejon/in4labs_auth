@@ -239,7 +239,7 @@ def enter_lab(lab_name):
         # Start the extra containers
         for extra_container in extra_containers:
             if extra_container['name'] == 'node-red':
-                volume_name = extra_container['volumes'].keys()[0]
+                volume_name = list(extra_container['volumes'].keys())[0]
                 nodered_dir = os.path.join(basedir, 'labs', lab_name, 'node-red')
                 setup_node_red(client, volume_name, nodered_dir, current_user.email)
 
