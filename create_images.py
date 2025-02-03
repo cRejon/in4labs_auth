@@ -2,7 +2,7 @@ import os
 
 import docker
 
-from config import Config
+from in4labs_app.config import Config
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
