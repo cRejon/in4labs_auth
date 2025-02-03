@@ -198,12 +198,11 @@ def enter_lab(lab_name):
         # Check if the lab needs extra containers
         extra_containers = lab.get('extra_containers', [])
         # Check if node-red is in extra_containers and get the nat port
+        nodered_nat_port = 1880
         for extra_container in extra_containers:
             if extra_container['name'] == 'node-red':
                 nodered_nat_port = extra_container['nat_port']
                 break
-            else:
-                nodered_nat_port = 1880
 
         # Check if the actual time slot container is already running (e.g. the user click twice on the Enter button).
         # If so, redirect to the container url. If not, start the container
