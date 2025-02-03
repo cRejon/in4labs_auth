@@ -259,6 +259,7 @@ def enter_lab(lab_name):
                         detach=True, 
                         remove=True,
                         privileged=True,
+                        devices= ['/dev/ttyACM[0-9]*:/dev/ttyACM[0-9]*:rwm'],
                         volumes=lab_volumes,
                         ports={'8000/tcp': ('0.0.0.0', host_port)}, 
                         environment=docker_env)
