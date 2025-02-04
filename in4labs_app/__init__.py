@@ -188,8 +188,8 @@ def enter_lab(lab_name):
         container_name = f'{lab_name.lower()}-{start_datetime.strftime("%Y%m%d%H%M")}'
         host_port = lab['host_port']
         nat_port = lab['nat_port']
-        default_volume = {'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}}
-        lab_volumes = default_volume.update(lab.get('volumes', {}))
+        lab_volumes = {'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}}
+        lab_volumes.update(lab.get('volumes', {}))
 
         hostname = request.headers.get('Host').split(':')[0]
         lab_url = f'http://{hostname}:{nat_port}'
