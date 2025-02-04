@@ -17,9 +17,6 @@ from argon2 import PasswordHasher
 from .config import Config
 
 
-# Export DOCKER_HOST environment variable to run in rootless mode
-os.environ['DOCKER_HOST'] = 'unix:///run/user/1000/docker.sock'
-
 db = SQLAlchemy()
 login = LoginManager()
 
