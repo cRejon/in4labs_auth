@@ -5,7 +5,7 @@ import docker
 from in4labs_app.config import Config
 
 
-basedir = os.path.abspath(os.path.dirname(__file__))
+labs_folder = os.path.join(os.getcwd(), 'in4labs_app', 'labs')
  
 client = docker.from_env()
 
@@ -30,7 +30,7 @@ for lab in labs:
         client.images.get(lab_image_name)
         print(f'Docker image {lab_image_name} already exists.')
     except docker.errors.ImageNotFound:
-        lab_dockerfile_path = os.path.join(basedir, 'in4labs_app', 'labs', lab_name)
+        lab_dockerfile_path = os.path.join(labs_folder, lab_name)
         create_docker_image(lab_image_name, lab_dockerfile_path)
     
     # Create or pull images in extra_containers
@@ -43,7 +43,7 @@ for lab in labs:
         except docker.errors.ImageNotFound:
             if container['name'] == 'node-red':
                 # Create the node-red image
-                nodered_dockerfile_path = os.path.join(basedir, 'in4labs_app', 'labs', lab_name, 'node-red')
+                nodered_dockerfile_path = os.path.join(labs_folder, lab_name, 'node-red')
                 create_docker_image(image_name, nodered_dockerfile_path)
             else:
                 print(f'Pulling Docker image {image_name}. Be patient, this will take a while...')
