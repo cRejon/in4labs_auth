@@ -55,10 +55,9 @@
         var user_datetime = new Date($('#date').val() + 'T' + $('#time').val());
         $('#date_time').val(toIsoString(user_datetime));
         $.ajax({
-            url: '/check_slot',
+            url: 'check_slot',
             type: 'GET',
             data: {
-                lab_name: "{{ lab.lab_name }}",
                 user_datetime: toIsoString(user_datetime),
             },
             success: function(response) {
@@ -128,7 +127,7 @@
                                 <h5>Enter now!</h5>
                             </div>
                             <div class="col-4">
-                                <a href="{{ url_for('enter_lab', lab_name=lab.lab_name) }}" target="_blank" class="btn btn-primary iot my-2 px-4">Enter</a>
+                                <a href="{{ url_for('app.enter_lab', lab_name=lab.lab_name) }}" target="_blank" class="btn btn-primary iot my-2 px-4">Enter</a>
                             </div>
                         </div>
                     </div>
