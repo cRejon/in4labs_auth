@@ -23,24 +23,12 @@
 
 <!-- BODY -->
 <body>
-    {% block header %}
     <header id="main-header">
         <div class="logos-header">
             <img class="image" src="{{ url_for('static', filename='img/logo-uned.jpg') }}" alt="logo-uned">
         </div>
-
-        <div class="page-title">
-            <h2>In4Labs - <strong>{{ lab.html_name }}</strong></h2>
-        </div>
-        <div class="log-header">
-            <div align="right">
-                <div >
-                    <p><strong>Log in as</strong>: {{ user_email }}</p>
-                </div>
-            </div>
-        </div>
+        {% block header %} {% endblock %}
     </header>
-    {% endblock %}
     
     <main>
         {% with messages = get_flashed_messages(with_categories=true) %}

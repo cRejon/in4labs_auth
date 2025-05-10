@@ -68,14 +68,24 @@ h6 {
     color: #000;
     height: 105px;
     padding: 20px 30px;
+
+    /* turn on flex */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .logos-header {
-    display: inline;
+    flex-shrink: 0;
+    /* don’t let the logo wrapper grow beyond 200px */
+    max-width: 90px;
 }
 
 .logos-header .image {
-	height: 100%;
+    /* scale down to fit the wrapper, preserve aspect */
+    width: 100%;
+    height: auto;
+    object-fit: contain;
 }
 
 .logos-header:not(:first-child) {
@@ -83,11 +93,10 @@ h6 {
 }
 
 .page-title {
+    /* let title grow in the middle */
+    flex: 1;
     text-align: center;
-    width: calc(100vw - 350px);
-    display: inline-block;
-    height: auto;
-    vertical-align: middle;
+    margin: 0 20px;
 }
 
 .page-title span {
@@ -99,9 +108,11 @@ h6 {
 }
 
 .log-header {
-    display: inline;
-    float: right;
-    padding: 10px;
+    /* keep log‐in text from wrapping */
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #flag {
