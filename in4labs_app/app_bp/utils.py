@@ -8,8 +8,6 @@ from flask import redirect, url_for, flash
 
 import bcrypt
 
-from argon2 import PasswordHasher
-
 
 class StopContainersTask(threading.Thread):
      def __init__(self, lab_name, containers, end_time, user_email):
@@ -64,10 +62,3 @@ def setup_node_red(client, volume_name, nodered_dir, user_email):
     settings_file = os.path.join(nodered_dir, 'settings.js')
     with open(settings_file, 'w') as file:
         file.write(js_content)
-
-# Create a hashed password for the Jupyter notebook
-def create_hash(password):
-    ph = PasswordHasher(memory_cost=10240, time_cost=10, parallelism=8)
-    hash = ph.hash(password)
-    hash = ':'.join(('argon2', hash))
-    return hash

@@ -12,7 +12,7 @@ from in4labs_app import db, server_name, labs, lab_duration
 from in4labs_app.app_bp import bp
 from .models import Booking
 from .forms import BookingForm
-from .utils import StopContainersTask, setup_node_red, get_lab, create_hash
+from .utils import StopContainersTask, setup_node_red, get_lab
 
 
 @bp.route('/')
@@ -146,15 +146,12 @@ def enter_lab(lab_name):
         lab_volumes = {'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}}
         lab_volumes.update(lab.get('volumes', {}))
         end_time = start_datetime + timedelta(minutes=lab_duration)
-        # Use the user email as password for the Jupyter notebook
-        notebook_password = create_hash(current_user.email)
         docker_env = {
             'SERVER_NAME': server_name,
             'LAB_NAME': lab_name,
             'USER_EMAIL': current_user.email,
             'END_TIME': end_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
             'CAM_URL': lab.get('cam_url', ''),
-            'NOTEBOOK_PASSWORD': notebook_password,
         }
 
         container_lab = client.containers.run(

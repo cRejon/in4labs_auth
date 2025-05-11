@@ -40,11 +40,6 @@ class Config(object):
                 'network': 'in4labs_net',
                 'command': '',
             }]
-        }, {
-            'lab_name' : 'lab_2',
-            'html_name' : 'Laboratory 2',
-            'description' : 'Example of a remote laboratory for Jupyter Notebook.',
-            'host_port' : 8002,
-        }],
+        },],
     }
 
