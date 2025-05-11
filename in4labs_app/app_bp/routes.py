@@ -184,7 +184,7 @@ def enter_lab(lab_name):
         'LAB_NAME': lab_name,
         'USER_EMAIL': current_user.email,
         'END_TIME': end_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
-        'CAM_URL': lab.get('cam_url', ''),
+        'CAM_URL': mounting['cam_url'],
     }
 
     container_lab = client.containers.run(
