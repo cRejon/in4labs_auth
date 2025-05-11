@@ -6,7 +6,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config(object): 
     # Flask settings
-    ENV = 'development' # change to 'production' in production
+    ENV = 'development' # change to 'production' to use behind a reverse proxy
     CACHE_TYPE = 'simple'
     CACHE_DEFAULT_TIMEOUT = 600
     SECRET_KEY = 'replace-me', # change in production

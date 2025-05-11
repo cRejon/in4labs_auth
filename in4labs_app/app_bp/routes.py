@@ -3,7 +3,7 @@ import time
 import requests
 from datetime import datetime, timedelta, timezone
 
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import current_app, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import current_user, login_required
 
 import docker
@@ -93,6 +93,11 @@ def enter_lab(lab_name):
     
     if booking and (booking.user_id == current_user.id):
         lab_url = f'/{server_name}/{lab_name}/'
+        host_port = lab['host_port'] 
+        if current_app.config['ENV'] != 'production': # don't use reverse proxy
+            hostname = request.headers.get('Host').split(':')[0]
+            lab_url = f'http://{hostname}:{host_port}/{server_name}/{lab_name}/'
+        
         client = docker.from_env()
         # Create a unique container name with the lab name and the start date time
         container_name = f'{lab_name.lower()}-{start_datetime.strftime("%Y%m%d%H%M")}'
@@ -138,7 +143,6 @@ def enter_lab(lab_name):
         
         # Run the lab container        
         lab_image_name = f'{lab_name.lower()}:latest'
-        host_port = lab['host_port']
         lab_volumes = {'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}}
         lab_volumes.update(lab.get('volumes', {}))
         end_time = start_datetime + timedelta(minutes=lab_duration)
