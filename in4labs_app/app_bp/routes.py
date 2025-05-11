@@ -1,5 +1,6 @@
 import os
 import time
+import requests
 from datetime import datetime, timedelta, timezone
 
 from flask import render_template, redirect, url_for, flash, request, jsonify
@@ -21,7 +22,6 @@ def index():
         return redirect(url_for('app.book_lab', lab_name=labs[0]['lab_name']))
     else:
         return render_template('select_lab.html', labs=labs, user_email=current_user.email)
-
 
 @bp.route('/book/<lab_name>/', methods=['GET', 'POST'])
 @login_required
@@ -167,7 +167,19 @@ def enter_lab(lab_name):
 
         stop_containers = StopContainersTask(lab_name, containers, end_time, current_user.email)
         stop_containers.start()
-        time.sleep(1) # Wait for the containers to start
+
+        # wait up to 10s for the container’s web server to respond
+        start_time = time.time()
+        timeout = 10
+        while time.time() - start_time < timeout:
+            try:
+                r = requests.get(f'http://127.0.0.1:{host_port}', timeout=1)
+                if 200 <= r.status_code < 500:
+                    break
+            except requests.RequestException:
+                pass
+            time.sleep(0.5)
+
         return redirect(lab_url)
 
     else:
