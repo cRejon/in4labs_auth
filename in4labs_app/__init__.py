@@ -12,8 +12,8 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 # Get variables from config
 server_name = Config.labs_config['server_name']
+mountings = Config.labs_config['mountings']
 labs = Config.labs_config['labs']
-lab_duration = Config.labs_config['duration']
 
 app = Flask(__name__, template_folder='templates', static_folder='static',
             static_url_path=(f'/{server_name}/static/'))

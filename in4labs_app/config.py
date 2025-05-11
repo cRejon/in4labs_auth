@@ -26,13 +26,17 @@ class Config(object):
     # Labs settings
     labs_config = {
         'server_name': 'rasp1',
-        'duration': 10, # minutes
-        'labs': [{
-            'lab_name' : 'lab_1',
-            'html_name' : 'Laboratory 1',
-            'description' : 'Example of a remote laboratory for Arduino.',
-            'host_port' : 8001,
+        'mountings': [{
+            'id': '1', 
+            'duration': 10, # minutes
             'cam_url': 'http://ULR_TO_WEBCAM/Mjpeg',
+        },],
+        'labs': [{
+            'lab_name': 'lab_1',
+            'html_name': 'Laboratory 1',
+            'description': 'Example of a remote laboratory for Arduino.',
+            'mounting_id': '1',
+            'host_port': 8001,
             'extra_containers': [{
                 'name': 'mosquitto',
                 'image': 'eclipse-mosquitto',
