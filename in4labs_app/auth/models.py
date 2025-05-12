@@ -1,7 +1,8 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-from in4labs_app import login
-from in4labs_app import db
+
+from in4labs_app import db, login
+
 
 @login.user_loader
 def load_user(id):
@@ -18,6 +19,4 @@ class User(UserMixin,db.Model):
 
     def __repr__(self):
         return f'<User {self.email}>'
-
-
 
