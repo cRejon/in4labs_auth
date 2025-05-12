@@ -51,6 +51,7 @@ def book_lab(lab_name):
         booking = Booking(
             user_id=current_user.id,
             mounting_id=lab['mounting_id'],
+            lab_name=lab['lab_name'],
             date_time=utc_user_datetime
         )
         db.session.add(booking)
@@ -119,10 +120,11 @@ def enter_lab(lab_name):
 
     booking = Booking.query.filter_by(
         mounting_id=lab['mounting_id'],
+        lab_name=lab['lab_name'],
         date_time=start_dt
     ).first()
     if not booking or booking.user_id != current_user.id:
-        flash("You don't have a reservation for the current slot.", 'error')
+        flash("You don't have a reservation in this Lab for the current time slot.", 'error')
         return redirect(url_for('app.book_lab', lab_name=lab_name))
 
     lab_url = f'/{server_name}/{lab_name}/'
