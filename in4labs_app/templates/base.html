@@ -25,7 +25,9 @@
 <body>
     <header id="main-header">
         <div class="logos-header">
-            <img class="image" src="{{ url_for('static', filename='img/logo-uned.jpg') }}" alt="logo-uned">
+            <a href="{{ url_for('app.index') }}" aria-label="Home">
+                <img class="image" src="{{ url_for('static', filename='img/logo-uned.jpg') }}" alt="logo-uned">
+            </a>
         </div>
         {% block header %} {% endblock %}
     </header>
@@ -54,4 +56,4 @@
     </footer>
 
 </body>
-</html> 
+</html>
