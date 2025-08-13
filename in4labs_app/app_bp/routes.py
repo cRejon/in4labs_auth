@@ -128,7 +128,7 @@ def enter_lab(lab_name):
         return redirect(url_for('app.book_lab', lab_name=lab_name))
 
     lab_url = f'/{server_name}/{lab_name}/'
-    host_port = lab['host_port'] 
+    host_port = mounting['host_port']
     if current_app.config['ENV'] != 'production': # don't use reverse proxy
         hostname = request.headers.get('Host').split(':')[0]
         lab_url = f'http://{hostname}:{host_port}/{server_name}/{lab_name}/'

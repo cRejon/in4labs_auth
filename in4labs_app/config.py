@@ -30,13 +30,13 @@ class Config(object):
             'id': '1', 
             'duration': 10, # minutes
             'cam_url': 'http://ULR_TO_WEBCAM/Mjpeg',
+            'host_port': 8001,
         },],
         'labs': [{
             'lab_name': 'lab_1',
             'html_name': 'Laboratory 1',
             'description': 'Example of a remote laboratory for Arduino.',
             'mounting_id': '1',
-            'host_port': 8001,
             'extra_containers': [{
                 'name': 'mosquitto',
                 'image': 'eclipse-mosquitto',
